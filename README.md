@@ -5,11 +5,9 @@ Desbloqueie conquistas na Steam sem nem sequer abrir o jogo!
 <!-- Substitua este placeholder pela URL da sua imagem ou GIF de demonstração -->
 ![Demonstração do SAO - Steam Achievement Override](https://s5.ezgif.com/tmp/ezgif-5b33962ae05c78.gif)
 
-**Selecione o jogo**
-
-**Escolha a conquista**
-
-**Clique para desbloquear**
+**🔍 Selecione o jogo**
+**🏆 Escolha a conquista**
+**✅ Clique para desbloquear**
 
 
 ## Download
