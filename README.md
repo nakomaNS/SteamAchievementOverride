@@ -1,15 +1,22 @@
 # Steam Achievement Override - SAO
 
-Desbloqueie conquistas sem nem sequer entrar no app!
+Desbloqueie conquistas na Steam sem nem sequer abrir o jogo!
 
 <!-- Substitua este placeholder pela URL da sua imagem ou GIF de demonstração -->
 ![Demonstração do SAO - Steam Achievement Override](https://s5.ezgif.com/tmp/ezgif-5b33962ae05c78.gif)
+
+**Selecione o jogo**
+
+**Escolha a conquista**
+
+**Clique para desbloquear**
+
 
 ## Download
 
 Baixe a versão mais recente para Windows:
 
-[Baixar versão para Windows](https://github.com/SeuUsuario/SAO-Steam-Achievement-Override/releases/latest/download/SAO-Windows.zip)
+[Baixar versão para Windows](https://github.com/nakomaNS/SteamAchievementOverride/releases/download/1.0/SteamAchievementOverride.exe)
 
 **Observação: Por ser um software de um desenvolvedor independente, o Windows pode exibir um aviso de segurança (SmartScreen). Se isso acontecer, clique em "Mais informações" e depois em "Executar assim mesmo". Não se preocupe, todo o código do programa é aberto.**
 
