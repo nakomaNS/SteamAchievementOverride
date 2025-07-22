@@ -4,8 +4,25 @@
 #include <vector>
 #include <algorithm>
 #include <fstream>
+#include <windows.h> 
 #include "json.hpp"
 #include "steam/steam_api.h"
+
+
+std::string RemoveSpecialCharacters(const std::string& input) {
+    std::string result;
+    for (char c : input) {
+        if (std::isalnum(c) || c == ' ' || c == '-' || c == '_') {
+            result += c;
+        }
+    }
+    while (result.find("  ") != std::string::npos) {
+        result.replace(result.find("  "), 2, " ");
+    }
+    result.erase(0, result.find_first_not_of(' '));
+    result.erase(result.find_last_not_of(' ') + 1);
+    return result;
+}
 
 std::map<unsigned int, std::string> LoadDatabaseFromFile();
 
@@ -18,42 +35,57 @@ struct GameInfo {
 };
 
 int main(int argc, char* argv[]) {
+    SetConsoleOutputCP(CP_UTF8);
+
     std::ofstream appid_file("steam_appid.txt");
     appid_file << "480";
     appid_file.close();
 
-    if (!SteamAPI_Init()) {
-        std::cerr << "Erro: Falha ao inicializar SteamAPI em game_reader." << std::endl;
-        return 1;
+    bool steam_api_initialized = SteamAPI_Init();
+    if (!steam_api_initialized) {
+        std::cerr << "Aviso: Falha ao inicializar SteamAPI. Listando todos os jogos do applist.json." << std::endl;
     }
-    
+
     std::map<unsigned int, std::string> allGames = LoadDatabaseFromFile();
-    if (allGames.empty()){
-        SteamAPI_Shutdown();
-        return 1;
+    if (allGames.empty()) {
+        if (SteamAPI_IsSteamRunning()) {
+            SteamAPI_Shutdown();
+            std::cerr << "Erro: Banco de dados vazio e Steam está rodando." << std::endl;
+            return 1;
+        }
+        std::cerr << "Aviso: Banco de dados vazio, mas Steam não está rodando. Continuando..." << std::endl;
     }
 
     const std::vector<std::string> palavras_proibidas = {
-        "server", "sdk", "demo", "beta", "dlc", "editor", "toolkit", 
-        "authoring tools", "benchmark", "dedicated", "bonus content", 
-        "configs", "redist", "test", "pack", "kit", "steam", "valve", 
-        "linux", "vr", "controller", "sharing", "client", "awards", 
-        "filmmaker", "add-on", "winui2", "slice", "greenlight", 
+        "server", "sdk", "demo", "beta", "dlc", "editor", "toolkit",
+        "authoring tools", "benchmark", "dedicated", "bonus content",
+        "configs", "redist", "test", "pack", "kit", "steam", "valve",
+        "linux", "vr", "controller", "sharing", "client", "awards",
+        "filmmaker", "add-on", "winui2", "slice", "greenlight",
         "depot", "key", "rgl/sc"
     };
-    
+
     std::vector<GameInfo> jogos_filtrados_passo1;
     for (const auto& pair : allGames) {
-        if (SteamApps()->BIsSubscribedApp(pair.first)) {
+        bool include_game = false;
+        if (steam_api_initialized) {
+            if (SteamApps()->BIsSubscribedApp(pair.first)) {
+                include_game = true;
+            }
+        } else {
+            include_game = true;
+        }
+
+        if (include_game) {
             bool ignorar = false;
             std::string gameNameLower = pair.second;
             std::transform(gameNameLower.begin(), gameNameLower.end(), gameNameLower.begin(),
-                           [](unsigned char c){ return std::tolower(c); });
+                           [](unsigned char c) { return std::tolower(c); });
 
             for (const auto& palavra : palavras_proibidas) {
                 if (gameNameLower.find(palavra) != std::string::npos) {
                     ignorar = true;
-                    break; 
+                    break;
                 }
             }
             if (!ignorar) {
@@ -75,7 +107,7 @@ int main(int argc, char* argv[]) {
             if (jogo_atual.name.rfind(jogo_base.name, 0) == 0 && jogo_atual.name.length() > jogo_base.name.length()) {
                 std::string parte_extra = jogo_atual.name.substr(jogo_base.name.length());
                 std::transform(parte_extra.begin(), parte_extra.end(), parte_extra.begin(),
-                               [](unsigned char c){ return std::tolower(c); });
+                               [](unsigned char c) { return std::tolower(c); });
 
                 bool esta_na_whitelist = false;
                 for (const auto& keyword : whitelist_keywords) {
@@ -96,13 +128,15 @@ int main(int argc, char* argv[]) {
     }
 
     for (const auto& jogo : lista_final) {
-        std::cout << jogo.name << " (AppID: " << jogo.id << ")" << std::endl;
+        std::string clean_name = RemoveSpecialCharacters(jogo.name);
+        std::cout << clean_name << " (AppID: " << jogo.id << ")" << std::endl;
     }
 
-    SteamAPI_Shutdown();
+    if (steam_api_initialized) {
+        SteamAPI_Shutdown();
+    }
     return 0;
 }
-
 
 std::map<unsigned int, std::string> LoadDatabaseFromFile() {
     const std::string filename = "applist.json";
@@ -110,7 +144,7 @@ std::map<unsigned int, std::string> LoadDatabaseFromFile() {
 
     std::cout << "Carregando banco de dados de jogos do arquivo local '" << filename << "'..." << std::endl;
 
-    std::ifstream db_file(filename);
+    std::ifstream db_file(filename, std::ios::binary);
     if (!db_file.is_open()) {
         std::cerr << "ERRO CRITICO: Nao foi possivel encontrar o arquivo '" << filename << "'!" << std::endl;
         std::cerr << "Certifique-se de que ele esta no caminho correto." << std::endl;
@@ -124,14 +158,15 @@ std::map<unsigned int, std::string> LoadDatabaseFromFile() {
         std::cerr << "ERRO CRITICO: Falha ao analisar o arquivo JSON: " << e.what() << std::endl;
         return gameDatabase;
     }
-    
+
     for (const auto& app : j["applist"]["apps"]) {
         if (!app["name"].get<std::string>().empty()) {
-            gameDatabase[app["appid"].get<unsigned int>()] = app["name"].get<std::string>();
+            std::string name = app["name"].get<std::string>();
+            gameDatabase[app["appid"].get<unsigned int>()] = name;
         }
     }
 
     std::cout << "Banco de dados com " << gameDatabase.size() << " jogos carregado com sucesso." << std::endl;
-    
-    return gameDatabase; 
+
+    return gameDatabase;
 }

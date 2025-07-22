@@ -1,8 +1,11 @@
-# Arquivos de compilação do C++
+# Arquivos de compilação
 *.obj
 *.exe
 *.ilk
 *.pdb
+dist/
+build/
+*.spec
 
 # Pasta de cache do Python e imagens
 cache/

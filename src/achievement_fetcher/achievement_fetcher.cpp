@@ -4,11 +4,35 @@
 #include <chrono>
 #include <thread>
 #include <fstream>
+#include <ctime> 
+#include <algorithm> // Para std::min
 
 #include "../game_reader/json.hpp" 
 #include "../sdk/public/steam/steam_api.h"
 
 using json = nlohmann::json;
+
+// Função auxiliar para codificar para Base64 (simplificada)
+// ATENÇÃO: Esta é uma implementação BÁSICA de Base64. Para produção, considere uma biblioteca mais robusta.
+std::string base64_encode(const std::vector<unsigned char>& in) {
+    std::string out;
+    int val = 0, valb = -6;
+    for (unsigned char c : in) {
+        val = (val << 8) + c;
+        valb += 8;
+        while (valb >= 0) {
+            out.push_back("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[(val >> valb) & 0x3F]);
+            valb -= 6;
+        }
+    }
+    if (valb > -6) {
+        out.push_back("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[((val << 8) >> (valb + 8)) & 0x3F]);
+    }
+    while (out.size() % 4) {
+        out.push_back('=');
+    }
+    return out;
+}
 
 class CSteamStatsAndAchievements {
 private:
@@ -34,7 +58,7 @@ public:
             m_UserStatsReceivedCallResult.Set(hSteamAPICall, this, &CSteamStatsAndAchievements::OnUserStatsReceived);
         } else {
             std::cerr << "Erro: Falha ao chamar RequestUserStats (retornou 0)." << std::endl;
-            m_bCallbackCompleted = true;
+            m_bCallbackCompleted = true; 
         }
     }
 
@@ -44,7 +68,7 @@ public:
         } else {
             m_bStatsValid = true;
         }
-        m_bCallbackCompleted = true;
+        m_bCallbackCompleted = true; 
     }
 
     bool IsRequestCompleted() const { return m_bCallbackCompleted; }
@@ -89,7 +113,7 @@ int main(int argc, char* argv[]) {
 
     int numAchievements = SteamUserStats()->GetNumAchievements();
     if (numAchievements == 0) {
-        std::cout << "[]" << std::endl;
+        std::cout << "[]" << std::endl; 
         SteamAPI_Shutdown();
         return 0;
     }
@@ -100,15 +124,32 @@ int main(int argc, char* argv[]) {
         if (!apiName) continue;
 
         bool bAchieved = false;
-        SteamUserStats()->GetAchievement(apiName, &bAchieved);
+        RTime32 unlockedTimestamp = 0; 
+        
+        SteamUserStats()->GetAchievementAndUnlockTime(apiName, &bAchieved, &unlockedTimestamp);
+        
         const char* name = SteamUserStats()->GetAchievementDisplayAttribute(apiName, "name");
         const char* desc = SteamUserStats()->GetAchievementDisplayAttribute(apiName, "desc");
-
+        
         json achJson;
         achJson["apiName"] = apiName;
         achJson["isAchieved"] = bAchieved;
         achJson["name"] = name ? name : apiName;
         achJson["description"] = desc ? desc : "";
+        achJson["unlockedTimestamp"] = unlockedTimestamp; 
+        
+        // NOVO: Obter o handle do ícone e os dados brutos RGBA
+        int iconHandle = SteamUserStats()->GetAchievementIcon(apiName);
+        if (iconHandle != 0) {
+            uint32 width, height;
+            if (SteamUtils()->GetImageSize(iconHandle, &width, &height)) {
+                std::vector<unsigned char> rgbaData(width * height * 4); // RGBA = 4 bytes por pixel
+                if (SteamUtils()->GetImageRGBA(iconHandle, rgbaData.data(), width * height * 4)) {
+                    achJson["icon_base64"] = base64_encode(rgbaData); // Codifica para Base64
+                }
+            }
+        }
+        
         achievementsJson.push_back(achJson);
     }
 
