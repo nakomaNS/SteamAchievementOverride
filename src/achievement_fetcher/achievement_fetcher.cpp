@@ -137,12 +137,23 @@ int main(int argc, char* argv[]) {
         
         int iconHandle = SteamUserStats()->GetAchievementIcon(apiName);
         if (iconHandle != 0) {
-            uint32 width, height;
-            if (SteamUtils()->GetImageSize(iconHandle, &width, &height)) {
-                std::vector<unsigned char> rgbaData(width * height * 4);
-                if (SteamUtils()->GetImageRGBA(iconHandle, rgbaData.data(), width * height * 4)) {
-                    achJson["icon_base64"] = base64_encode(rgbaData);
+            bool iconFetched = false;
+            // Tenta buscar o ícone por até 5 segundos (50 tentativas de 100ms)
+            for (int retry = 0; retry < 50; ++retry) {
+                uint32 width, height;
+                if (SteamUtils()->GetImageSize(iconHandle, &width, &height) && width > 0 && height > 0) {
+                    
+                    std::vector<unsigned char> rgbaData(width * height * 4);
+                    if (SteamUtils()->GetImageRGBA(iconHandle, rgbaData.data(), rgbaData.size())) {
+                        achJson["icon_base64"] = base64_encode(rgbaData);
+                        iconFetched = true;
+                        break; // Sucesso! Sai do loop de retentativa.
+                    }
                 }
+                
+                // Se falhou, roda os callbacks da Steam e espera um pouco
+                SteamAPI_RunCallbacks();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }
         

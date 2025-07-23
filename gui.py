@@ -14,7 +14,6 @@ import datetime
 import time
 import multiprocessing
 import random
-
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QGridLayout, 
                              QScrollArea, QLabel, QPushButton, QVBoxLayout, 
                              QHBoxLayout, QDialog, QStackedWidget, QStatusBar,
@@ -33,8 +32,6 @@ else:
 CARD_WIDTH = 215
 CARD_IMAGE_HEIGHT = int(CARD_WIDTH * 0.46)
 CARD_PADDING = 20
-
-
 ICON_ADD_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0iMCAwIDI0IDI0IiB3aWR0aD0iMjRweCIgZmlsbD0iI2YwZjBmMCI+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0xOSAxM2gtNnY2aC0ydi02SDV2LTJoNlY1aDJ2Nmg2djJ6Ii8+PC9zdmc+"
 ICON_CHECK_WHITE_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik05IDE2LjE3TDQuODMgMTJsLTEuNDIgMS40MUw5IDE5IDIxIDdsLTEuNDEtMS40MXoiLz48L3N2Zz4="
 ICON_CHECK_GRAY_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzc3NCI+PHBhdGggZD0iTTkgMTYuMTdMNC44MyAxMmwtMS40MiAxLjQxTDkgMTkgMjEgN2wtMS44MS0xLjQxeiIvPjwvc3ZnPg=="
@@ -46,7 +43,6 @@ ICON_SEARCH_DARK_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhl
 ICON_SEARCH_LIGHT_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iNDhweCIgdmlld0JveD0iMCAtOTYwIDk2MCA5NjAiIHdpZHRoPSI0OHB4IiBmaWxsPSIjMDAwMDAwIj48cGF0aCBkPSJNNzk2LTEyMSA1MzMtMzg0cS0zMCAyNi02OS45NiA0MC41UTQyMy4wOC0zMjkgMzc4LTMyOXEtMTA4LjE2IDAtMTgzLjA4LTc1UTEyMC00NzkgMTIwLTU4NXQ3NS0xODFxNzUtNzUgMTgxLjUtNzV0MTgxIDc1UTYzMi02OTEgNjMyLTU4NC44NSA2MzItNTQyIDYxOC01MDJxLTE0IDQwLTQyIDc1bDI2NCAyNjItNDQgNDRaTTM3Ny0zODlxODEuMjUgMCAxMzguMTMtNTcuNVE1NzItNTA0IDU3Mi01ODV0LTU2Ljg3LTEzOC41UTQ1OC4yNS03ODEgMzc3LTc4MXEtODIuMDggMC0xMzkuNTQgNTcuNVExODAtNjY2IDE4MC01ODV0NTcuNDYgMTM4LjVRMjk0LjkyLTM4OSAzNzctMzg5WiIvPjwvc3ZnPg=="
 ICON_SETTINGS_DARK_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iNDhweCIgdmlld0JveD0iMCAtOTYwIDk2MCA5NjAiIHdpZHRoPSI0OHB4IiBmaWxsPSIjZTNlM2UzIj48cGF0aCBkPSJtMzg4LTgwLTIwLTEyNnEtMTktNy00MC0xOXQtMzctMjVsLTExOCA1NC05My0xNjQgMTA4LTc5cS0yLTktMi41LTIwLjVUMTg1LTQ4MHEwLTktLjUtMjAuNVQxODgtNTUxTDgwLTYwMGw5My0xNjQgMTE4IDU0cTE2LTEzIDM3LTI1dDQwLTE4bDIwLTEyN2gxODRsMjAgMTI2cTE5IDcgNDAuNSAxOC41VDY2OS03MTBsMTE4LTU0IDkzIDE2NC0xMDggNzdxMiAxMCAyLjUgMjEuNXQuNSAyMS41cTAgMTAtLjUgMjF0LTIuNSAyMWwxMDggNzgtOTMgMTY0LTExOC01NHEtMTYgMTMtMzYuNSAyNS41VDU5Mi0yMDZMNTcyLTgwSDM4OFptNDgtNjhoODhsMTQtMTEycTMzLTggNjIuNS0yNXQ1My41LTQxbDEwNiA0NiA0MC03Mi05NC02OXE0LTE3IDYuNS0zMy41VDcxNS00ODBxMC0xNy0yLTMzLjV0LTctMzMuNWw5NC02OS00MC03Mi0xMDYgNDZxLTIzLTI2LTUyLTQzLjVUNTM4LTcwOGwtMTQtMTEyaC04OGwtMTQgMTEycS0zNCA3LTYzLjUgMjRUMzA2LTY0MmwtMTA2LTQ2LTQwIDcyIDk0IDY5cS00IDE3LTYuNSAzMy41VDI0NS00ODBxMCAxNyAyLjUgMzMuNVQyNTQtNDEzbC05NCA2OSA0MCA3MiAxMDYtNDZxMjQgMjQgNTMuNSA0MXQ2Mi41IDI1bDE0IDExMlptNDQtMjEwcTU0IDAgOTItMzh0MzgtOTJxMC01NC0zOC05MnQtOTItMzhxLTU0IDAtOTIgMzh0LTM4IDkycTAgNTQgMzggOTJ0OTIgMzhabTAtMTMwWiIvPjwvc3ZnPg=="
 ICON_SETTINGS_LIGHT_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iNDhweCIgdmlld0JveD0iMCAtOTYwIDk2MCA5NjAiIHdpZHRoPSI0OHB4IiBmaWxsPSIjMDAwMDAwIj48cGF0aCBkPSJtMzg4LTgwLTIwLTEyNnEtMTktNy00MC0xOXQtMzctMjVsLTExOCA1NC05My0xNjQgMTA4LTc5cS0yLTktMi41LTIwLjVUMTg1LTQ4MHEwLTkgLjUtMjAuNVQxODgtNTIxTDgwLTYwMGw5My0xNjQgMTE4IDU0cTE2LTEzIDM3LTI1dDQwLTE4bDIwLTEyN2gxODRsMjAgMTI2cTE5IDcgNDAuNSAxOC41VDY2OS03MTBsMTE4LTU0IDkzIDE2NC0xMDggNzdxMiAxMCAyLjUgMjEuNXQuNSAyMS41cTAgMTAtLjUgMjF0LTIuNSAyMWwxMDggNzgtOTMgMTY0LTExOC01NHEtMTYgMTMtMzYuNSAyNS41VDU5Mi0yMDZMNTcyLTgwSDM4OFptNDgtNjBoODhsMTQtMTEycTMzLTggNjIuNS0yNXQ1My41LTQxbDEwNiA0NiA0MC03Mi05NC02OXE0LTE3IDYuNS0zMy41VDcxNS00ODBxMC0xNy0yLTMzLjV0LTctMzMuNWw5NC02OS00MC03Mi0xMDYgNDZxLTIzLTI2LTUyLTQzLjVUNTM4LTcwOGwtMTQtMTEyaC04OGwtMTQgMTEycS0zNCA3LTYzLjUgMjRUMzA2LTY0MmwtMTA2LTQ2LTQwIDcyIDk0IDY5cS00IDE3LTYuNSAzMy41VDI0NS00ODBxMCAxNyAyLjUgMzMuNVQyNTQtNDEzbC05NCA2OSA0MCA3MiAxMDYtNDZxMjQgMjQgNTMuNSA0MXQ2Mi41IDI1bDE0IDExMlptNDQtMjEwcTU0IDAgOTItMzh0MzgtOTJxMC01NC0zOC05MnQtOTItMzhxLTU0IDAtOTIgMzh0LTM4IDkycTAgNTQgMzggOTJ0OTIgMzhabTAtMTMwWiIvPjwvc3ZnPg=="
-
 ESTILO_DARK = """
     QMainWindow, QDialog, QScrollArea > QWidget > QWidget {
         background-color: #1e1e1e;
@@ -449,8 +445,8 @@ class ParticleBackground(QWidget):
             painter.drawEllipse(QPointF(p['x'], p['y']), self.particle_size, self.particle_size)
 
     def showEvent(self, event):
+        self._timer.start()
         super().showEvent(event)
-        QTimer.singleShot(150, self.start_loading_process)
 
     def hideEvent(self, event):
         self._timer.stop()
@@ -588,7 +584,12 @@ class CustomDialog(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         container = QFrame(self)
-        container.setStyleSheet("background-color: rgba(30, 30, 30, 0.98); border-radius: 10px;")
+        container_style = "border-radius: 10px;"
+        if self.parent_app.current_theme == 'dark':
+            container_style += "background-color: rgba(30, 30, 30, 0.98);"
+        else:
+            container_style += "background-color: rgba(245, 245, 245, 0.98); color: black;"
+        container.setStyleSheet(container_style)
         layout = QVBoxLayout(container)
         layout.setContentsMargins(20, 25, 20, 20)
         layout.setSpacing(15)
@@ -629,11 +630,9 @@ class CustomDialog(QDialog):
 
 class UpdateLoadingEvent(QEvent):
     TYPE = QEvent.Type(QEvent.Type.User + 1)
-    def __init__(self, text_key, value, maximum, *args):
+    def __init__(self, text_key, *args):
         super().__init__(self.TYPE)
         self.text_key = text_key
-        self.value = value
-        self.maximum = maximum
         self.args = args
 
 class BuildGridEvent(QEvent):
@@ -644,7 +643,10 @@ class ShowAchievementsEvent(QEvent):
     def __init__(self, appid): super().__init__(self.TYPE); self.appid = appid
 class DisplayAchievementsEvent(QEvent):
     TYPE = QEvent.Type(QEvent.Type.User + 4)
-    def __init__(self, data): super().__init__(self.TYPE); self.data = data
+    def __init__(self, data, icons_validated):
+        super().__init__(self.TYPE)
+        self.data = data
+        self.icons_validated = icons_validated
 class ShowMessageEvent(QEvent):
     TYPE = QEvent.Type(QEvent.Type.User + 5)
     def __init__(self, title_key, message_key, dialog_type, *args):
@@ -1312,43 +1314,49 @@ class App(QMainWindow):
         appid_str = str(appid)
         achievement_cache_path = os.path.join(self.ACHIEVEMENT_DATA_CACHE_DIR, f"{appid_str}.json")
         
-        achievements_data = []
-        try:
-            if os.path.exists(achievement_cache_path):
-                with open(achievement_cache_path, 'r', encoding='utf-8') as f:
-                    achievements_data = json.load(f)
-                
-                if not achievements_data:
-                    raise ValueError("Cache de conquistas vazio, buscando novamente.")
+        max_retries = 3
+        for attempt in range(max_retries):
+            achievements_data = []
+            try:
+                if os.path.exists(achievement_cache_path):
+                    with open(achievement_cache_path, 'r', encoding='utf-8') as f:
+                        achievements_data = json.load(f)
+                    if achievements_data and all('icon_base64' in ach for ach in achievements_data):
+                        QApplication.instance().postEvent(self, DisplayAchievementsEvent(achievements_data, True))
+                        return
 
-            if not achievements_data:
                 bin_dir_for_subprocess = os.path.dirname(self.ACHIEVEMENT_FETCHER_PATH)
-                print(f"--- DEBUG: PRESTES A EXECUTAR {self.ACHIEVEMENT_FETCHER_PATH} ---")
                 result = subprocess.run(
                     [self.ACHIEVEMENT_FETCHER_PATH, appid_str],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    encoding='utf-8',
-                    creationflags=subprocess.CREATE_NO_WINDOW,
-                    cwd=bin_dir_for_subprocess
+                    capture_output=True, text=True, check=False, encoding='utf-8',
+                    creationflags=subprocess.CREATE_NO_WINDOW, cwd=bin_dir_for_subprocess
                 )
-                
+
                 if result.returncode != 0:
-                    QApplication.instance().postEvent(self, ShowMessageEvent('error', 'failed_fetch_achievements', 'error', result.stderr))
-                    return
-                achievements_data = json.loads(result.stdout)
+                    raise RuntimeError(f"achievement_fetcher.exe falhou: {result.stderr}")
                 
-                os.makedirs(self.ACHIEVEMENT_DATA_CACHE_DIR, exist_ok=True)
-                with open(achievement_cache_path, 'w', encoding='utf-8') as f:
-                    json.dump(achievements_data, f, indent=4)
+                achievements_data = json.loads(result.stdout)
+                icons_all_present = not achievements_data or all('icon_base64' in ach for ach in achievements_data)
 
-            QApplication.instance().postEvent(self, DisplayAchievementsEvent(achievements_data))
+                if icons_all_present:
+                    os.makedirs(self.ACHIEVEMENT_DATA_CACHE_DIR, exist_ok=True)
+                    with open(achievement_cache_path, 'w', encoding='utf-8') as f:
+                        json.dump(achievements_data, f, indent=4)
+                    QApplication.instance().postEvent(self, DisplayAchievementsEvent(achievements_data, True))
+                    return
+                else:
+                    if attempt < max_retries - 1:
+                        QApplication.instance().postEvent(self, UpdateLoadingEvent('fetching_achievements_data')) 
+                        time.sleep(3)
+                    continue
 
-        except json.JSONDecodeError as e:
-            QApplication.instance().postEvent(self, ShowMessageEvent('error', 'failed_fetch_achievements', 'error', str(e)))
-        except Exception as e:
-            QApplication.instance().postEvent(self, ShowMessageEvent('error', 'unexpected_error', 'error', str(e)))
+            except Exception as e:
+                print(f"Erro na tentativa {attempt + 1}: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(3)
+                continue
+        
+        QApplication.instance().postEvent(self, DisplayAchievementsEvent([], False))
 
     def _show_achievements_for_valid_game(self):
         self.status_bar.showMessage(self.tr('fetching_achievements', self.current_game_name))
@@ -1583,11 +1591,17 @@ class App(QMainWindow):
             self.status_bar.show()
         elif event.type() == ShowAchievementsEvent.TYPE: self._show_achievements_for_valid_game()
         elif event.type() == DisplayAchievementsEvent.TYPE:
-            self.all_achievements_data = sorted(event.data, key=lambda x: (x['isAchieved'], x['name'].lower()))
-            self.display_achievements(self.all_achievements_data)
             self.status_bar.showMessage(self.tr('ready'))
             self.ach_loading_widget.hide()
-            self.ach_scroll.show()
+
+            if event.icons_validated:
+                self.all_achievements_data = sorted(event.data, key=lambda x: (x['isAchieved'], x['name'].lower()))
+                self.display_achievements(self.all_achievements_data)
+                self.ach_scroll.show()
+                self.unlock_button.show()
+            else:
+                self.show_custom_message('error', 'failed_fetch_achievements', 'error', "Não foi possível carregar os ícones. Verifique sua conexão com a Steam e tente novamente.")
+                self.show_games_panel()
 
         elif event.type() == ShowMessageEvent.TYPE:
             self.show_custom_message(event.title_key, event.message_key, event.dialog_type, *event.args)
