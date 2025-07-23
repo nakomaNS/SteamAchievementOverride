@@ -1430,7 +1430,7 @@ class App(QMainWindow):
                 self.show_custom_message('info', 'no_achievements', 'info', self.current_game_name)
 
 if __name__ == '__main__':
-    myappid = u'sao.override.1.0'
+    myappid = u'sao.override'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     app = QApplication(sys.argv)
     window = App()
