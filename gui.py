@@ -12,6 +12,8 @@ import base64
 import math
 import datetime
 import time
+import multiprocessing
+import random
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QGridLayout, 
                              QScrollArea, QLabel, QPushButton, QVBoxLayout, 
@@ -19,7 +21,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QGridLayout,
                              QCheckBox, QFrame, QProgressBar, QGraphicsDropShadowEffect,
                              QLineEdit, QRadioButton, QButtonGroup)
 from PyQt6.QtGui import QPixmap, QImage, QFont, QIcon, QColor, QPainter
-from PyQt6.QtCore import Qt, QObject, pyqtSignal, QSize, QEvent, QPropertyAnimation, QRect
+from PyQt6.QtCore import Qt, QObject, pyqtSignal, QSize, QEvent, QPropertyAnimation, QRect, QPoint, QTimer, QPointF
 
 if getattr(sys, 'frozen', False):
     GLOBAL_BASE_DIR = os.path.dirname(sys.executable)
@@ -279,6 +281,22 @@ ESTILO_LIGHT = """
         outline: none;
     }
 """
+ESTILO_LOADING = """
+    #LoadingPanel {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                     stop:0 #1D2B3C, stop:1 #111822);
+    }
+    #GlassPanel {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(45, 45, 45, 0.4), stop:1 rgba(30, 30, 30, 0.6));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+    }
+    #LoadingStatusLabel {
+        color: #c0c0c0;
+        background: transparent;
+        font-size: 11pt;
+    }
+"""
 
 TRANSLATIONS = {
     'pt': {
@@ -376,6 +394,181 @@ class UnlockProcessCompletedEvent(QEvent):
         self.error_dialog_type = error_dialog_type
         self.error_args = error_args
         self.appid_to_refresh = appid_to_refresh
+
+class ParticleBackground(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.particles = []
+        self._timer = QTimer(self, interval=16)
+        self._timer.timeout.connect(self._update_particles)
+        
+        self.particle_color = QColor(0, 150, 255, 120)
+        self.num_particles = 500
+        self.particle_size = 2
+        self.background_color = QColor("#111822")
+        self._initialized = False
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._initialized = False
+
+    def _init_particles(self):
+        if self.width() == 0 or self._initialized: return
+        self.particles.clear()
+        w, h = self.width(), self.height()
+        for _ in range(self.num_particles):
+            self.particles.append({
+                "x": random.uniform(0, w),
+                "y": random.uniform(0, h),
+                "speed": random.uniform(0.2, 1.2)
+            })
+        self._initialized = True
+
+    def _update_particles(self):
+        if not self._initialized: return
+        for p in self.particles:
+            p['y'] += p['speed']
+            if p['y'] > self.height():
+                p['y'] = 0
+                p['x'] = random.uniform(0, self.width())
+        self.update()
+
+    def paintEvent(self, event):
+        if not self._initialized:
+            self._init_particles()
+        
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.fillRect(self.rect(), self.background_color)
+
+        if not self.particles: return
+        
+        painter.setPen(self.particle_color)
+        painter.setBrush(self.particle_color)
+        for p in self.particles:
+            painter.drawEllipse(QPointF(p['x'], p['y']), self.particle_size, self.particle_size)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        QTimer.singleShot(150, self.start_loading_process)
+
+    def hideEvent(self, event):
+        self._timer.stop()
+        super().hideEvent(event)
+        
+    def _init_particles(self):
+        if self.width() == 0: return
+        w = self.width()
+        h = self.height()
+        for _ in range(self.num_particles):
+            self.particles.append({
+                "x": random.randint(0, w),
+                "y": random.randint(0, h),
+                "speed": random.uniform(0.2, 1.2)
+            })
+        self._initialized = True
+
+    def _update_particles(self):
+        if not self._initialized: return
+        for p in self.particles:
+            p['y'] += p['speed']
+            if p['y'] > self.height():
+                p['y'] = 0
+                p['x'] = random.randint(0, self.width())
+        self.update()
+
+    def paintEvent(self, event):
+        if not self._initialized and self.width() > 0:
+            self._init_particles()
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.fillRect(self.rect(), self.background_color)
+
+        if not self.particles: return
+        for p in self.particles:
+            painter.fillRect(int(p['x']), int(p['y']),
+                             self.particle_size, self.particle_size,
+                             self.particle_color)
+        
+        for p in self.particles:
+            painter.drawEllipse(int(p['x']), int(p['y']), self.particle_size, self.particle_size)
+
+    def showEvent(self, event):
+        if not self.particles and self.width() > 0:
+            for _ in range(self.num_particles):
+                self.particles.append({
+                    "x": random.randint(0, self.width()),
+                    "y": random.randint(0, self.height()),
+                    "speed": random.uniform(0.2, 1.2)
+                })
+        self._timer.start()
+        super().showEvent(event)
+
+    def hideEvent(self, event):
+        self._timer.stop()
+        super().hideEvent(event)
+
+    def _update_particles(self):
+        for p in self.particles:
+            p['y'] += p['speed']
+            if p['y'] > self.height():
+                p['y'] = 0
+                p['x'] = random.randint(0, self.width())
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.fillRect(self.rect(), self.background_color)
+
+        painter.setPen(self.particle_color)
+        for p in self.particles:
+            painter.drawPoint(int(p['x']), int(p['y']))
+
+class PulsatingDotsWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumHeight(60)
+        self._animation_timer = QTimer(self, interval=30)
+        self._animation_timer.timeout.connect(self.update)
+        self._time = 0
+        self.dot_color = QColor("#00A6FF")
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        center_x = self.width() / 2
+        center_y = self.height() / 2
+        
+        num_dots = 3
+        spacing = 40
+        radius = 8
+        
+        total_width = (num_dots - 1) * spacing
+        start_x = center_x - total_width / 2
+
+        self._time += 1
+        
+        for i in range(num_dots):
+            sin_value_normalized = (math.sin(math.radians((self._time * 4 - i * 30) % 360)) + 1) / 2.0
+            alpha = int(100 + 155 * sin_value_normalized)
+            
+            self.dot_color.setAlpha(alpha)
+            painter.setBrush(self.dot_color)
+            painter.setPen(Qt.PenStyle.NoPen)
+            
+            x = start_x + i * spacing
+            painter.drawEllipse(QPointF(x, center_y), radius, radius)
+            
+    def showEvent(self, event):
+        self._animation_timer.start()
+        super().showEvent(event)
+
+    def hideEvent(self, event):
+        self._animation_timer.stop()
+        super().hideEvent(event)
 
 class AchievementValidationCompletedEvent(QEvent):
     TYPE = QEvent.Type(QEvent.Type.User + 7)
@@ -755,8 +948,9 @@ class App(QMainWindow):
             print(f"Erro ao salvar configurações: {e}")
 
     def apply_theme(self, theme):
+        self.current_theme = theme
         if theme == 'dark':
-            self.setStyleSheet(ESTILO_DARK)
+            self.setStyleSheet(ESTILO_DARK + ESTILO_LOADING)
             self.current_theme = 'dark'
             if hasattr(self, 'settings_button') and self.settings_button is not None:
                 self.settings_button.setIcon(self.create_icon_from_b64(ICON_SETTINGS_DARK_B64))
@@ -767,7 +961,7 @@ class App(QMainWindow):
                 self.achievement_search_input.set_search_icon(self.create_icon_from_b64(ICON_SEARCH_DARK_B64))
 
         elif theme == 'light':
-            self.setStyleSheet(ESTILO_LIGHT)
+            self.setStyleSheet(ESTILO_LIGHT + ESTILO_LOADING)
             self.current_theme = 'light'
             if hasattr(self, 'settings_button') and self.settings_button is not None:
                 self.settings_button.setIcon(self.create_icon_from_b64(ICON_SETTINGS_LIGHT_B64))
@@ -810,66 +1004,50 @@ class App(QMainWindow):
                 sys.exit(1)
 
     def create_loading_panel(self):
-        self.loading_panel = QWidget()
-        main_layout = QVBoxLayout(self.loading_panel)
-        gradient_style = """
-            QWidget#loading_panel {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                            stop:0 #1a1a1a, stop:1 #121212);
-            }
-        """
-        self.loading_panel.setObjectName("loading_panel")
-        self.loading_panel.setStyleSheet(gradient_style)
+        self.loading_panel = ParticleBackground(self)
 
-        icon_path = os.path.join(self._PACKAGED_RESOURCES_PATH, "src", "icons", "icon.png")
-        original_pixmap = QPixmap(icon_path)
-        icon_size = 250
-        padding = 30
-        canvas_size = icon_size + (padding * 2)
-        canvas_pixmap = QPixmap(canvas_size, canvas_size)
-        canvas_pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(canvas_pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-        target_rect = QRect(padding, padding, icon_size, icon_size)
-        painter.drawPixmap(target_rect, original_pixmap)
-        painter.end()
-        icon_label = QLabel()
-        icon_label.setPixmap(canvas_pixmap)
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        glow_effect = QGraphicsDropShadowEffect()
-        glow_effect.setBlurRadius(25)
-        glow_effect.setOffset(0, 0)
-        icon_label.setGraphicsEffect(glow_effect)
-        self.glow_animation = QPropertyAnimation(glow_effect, b"color")
-        self.glow_animation.setDuration(2000)
-        start_color = QColor("#0078ff"); start_color.setAlpha(100)
-        end_color = QColor("#0078ff"); end_color.setAlpha(255)
-        self.glow_animation.setStartValue(start_color)
-        self.glow_animation.setKeyValueAt(0.5, end_color)
-        self.glow_animation.setEndValue(start_color)
-        self.glow_animation.setLoopCount(-1)
-        self.glow_animation.start()
-        icon_layout = QHBoxLayout()
-        icon_layout.addStretch(1)
-        icon_layout.addWidget(icon_label)
-        icon_layout.addStretch(1)
+        main_layout = QVBoxLayout(self.loading_panel)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        main_layout.addStretch(1)
+
+        glass_container = QFrame()
+        glass_container.setObjectName("GlassPanel")
+        glass_container.setFixedSize(500, 300)
+        
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(45)
+        shadow.setXOffset(0)
+        shadow.setYOffset(0)
+        shadow.setColor(QColor(0, 0, 0, 100))
+        glass_container.setGraphicsEffect(shadow)
+
+        glass_layout = QVBoxLayout(glass_container)
+        glass_layout.setContentsMargins(40, 40, 40, 40)
+        glass_layout.setSpacing(15)
+        glass_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        animation_widget = PulsatingDotsWidget(self)
+
         self.loading_status_label = QLabel(self.tr('loading_games'))
-        self.loading_status_label.setFont(QFont("Segoe UI", 10))
+        self.loading_status_label.setObjectName("LoadingStatusLabel")
+        self.loading_status_label.setFont(QFont("Segoe UI", 11))
         self.loading_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.loading_progress_bar = QProgressBar()
-        self.loading_progress_bar.setFixedWidth(400)
-        self.loading_progress_bar.setTextVisible(False)
-        progress_bar_layout = QHBoxLayout()
-        progress_bar_layout.addStretch(1)
-        progress_bar_layout.addWidget(self.loading_progress_bar)
-        progress_bar_layout.addStretch(1)
+        
+        glass_layout.addStretch(1)
+        glass_layout.addWidget(animation_widget)
+        glass_layout.addSpacing(15)
+        glass_layout.addWidget(self.loading_status_label)
+        glass_layout.addStretch(1)
+
+        h_layout = QHBoxLayout()
+        h_layout.addStretch(1)
+        h_layout.addWidget(glass_container)
+        h_layout.addStretch(1)
+        
+        main_layout.addLayout(h_layout)
         main_layout.addStretch(1)
-        main_layout.addLayout(icon_layout)
-        main_layout.addSpacing(20)
-        main_layout.addWidget(self.loading_status_label)
-        main_layout.addLayout(progress_bar_layout)
-        main_layout.addStretch(1)
+
         self.stacked_widget.addWidget(self.loading_panel)
 
     def create_games_panel(self):
@@ -1051,7 +1229,7 @@ class App(QMainWindow):
             QApplication.instance().postEvent(self, UpdateLoadingEvent('loading_games', 0, 0))
             
             bin_dir_for_subprocess = os.path.dirname(self.GAME_READER_PATH)
-            
+            print(f"--- DEBUG: PRESTES A EXECUTAR {self.GAME_READER_PATH} ---")
             result = subprocess.run(
                 [self.GAME_READER_PATH],
                 capture_output=True,
@@ -1145,6 +1323,7 @@ class App(QMainWindow):
 
             if not achievements_data:
                 bin_dir_for_subprocess = os.path.dirname(self.ACHIEVEMENT_FETCHER_PATH)
+                print(f"--- DEBUG: PRESTES A EXECUTAR {self.ACHIEVEMENT_FETCHER_PATH} ---")
                 result = subprocess.run(
                     [self.ACHIEVEMENT_FETCHER_PATH, appid_str],
                     capture_output=True,
@@ -1336,6 +1515,7 @@ class App(QMainWindow):
         try:
             bin_dir_for_subprocess = os.path.dirname(self.STEAM_POPPER_PATH)
             command = [self.STEAM_POPPER_PATH, str(appid_to_refresh)] + to_unlock
+            print(f"--- DEBUG: PRESTES A EXECUTAR {command} ---")
             
             result = subprocess.run(
                 command,
@@ -1394,12 +1574,12 @@ class App(QMainWindow):
     def customEvent(self, event):
         if event.type() == UpdateLoadingEvent.TYPE:
             self.loading_status_label.setText(self.tr(event.text_key, *event.args))
-            self.loading_progress_bar.setMaximum(event.maximum)
-            self.loading_progress_bar.setValue(event.value)
         elif event.type() == BuildGridEvent.TYPE:
             self.currently_displayed_games = event.games
+            self.apply_theme(self.current_theme)
+            self.update_ui_texts()
+            QTimer.singleShot(0, lambda: self.build_grid(event.games))
             self.stacked_widget.setCurrentWidget(self.games_panel)
-            self.build_grid(event.games)
             self.status_bar.show()
         elif event.type() == ShowAchievementsEvent.TYPE: self._show_achievements_for_valid_game()
         elif event.type() == DisplayAchievementsEvent.TYPE:
@@ -1429,9 +1609,13 @@ class App(QMainWindow):
             else:
                 self.show_custom_message('info', 'no_achievements', 'info', self.current_game_name)
 
+
 if __name__ == '__main__':
-    myappid = u'sao.override'
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    multiprocessing.freeze_support()
+    myappid = 'sao'
+    if sys.platform == "win32":
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    
     app = QApplication(sys.argv)
     window = App()
     window.show()
