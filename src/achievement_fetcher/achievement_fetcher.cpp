@@ -5,15 +5,12 @@
 #include <thread>
 #include <fstream>
 #include <ctime> 
-#include <algorithm> // Para std::min
+#include <algorithm>
 
 #include "../game_reader/json.hpp" 
 #include "../sdk/public/steam/steam_api.h"
 
 using json = nlohmann::json;
-
-// Função auxiliar para codificar para Base64 (simplificada)
-// ATENÇÃO: Esta é uma implementação BÁSICA de Base64. Para produção, considere uma biblioteca mais robusta.
 std::string base64_encode(const std::vector<unsigned char>& in) {
     std::string out;
     int val = 0, valb = -6;
@@ -138,14 +135,13 @@ int main(int argc, char* argv[]) {
         achJson["description"] = desc ? desc : "";
         achJson["unlockedTimestamp"] = unlockedTimestamp; 
         
-        // NOVO: Obter o handle do ícone e os dados brutos RGBA
         int iconHandle = SteamUserStats()->GetAchievementIcon(apiName);
         if (iconHandle != 0) {
             uint32 width, height;
             if (SteamUtils()->GetImageSize(iconHandle, &width, &height)) {
-                std::vector<unsigned char> rgbaData(width * height * 4); // RGBA = 4 bytes por pixel
+                std::vector<unsigned char> rgbaData(width * height * 4);
                 if (SteamUtils()->GetImageRGBA(iconHandle, rgbaData.data(), width * height * 4)) {
-                    achJson["icon_base64"] = base64_encode(rgbaData); // Codifica para Base64
+                    achJson["icon_base64"] = base64_encode(rgbaData);
                 }
             }
         }
