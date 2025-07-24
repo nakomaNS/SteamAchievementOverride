@@ -698,35 +698,18 @@ class CustomStatusBar(QStatusBar):
 class App(QMainWindow):
     def __init__(self):
         super().__init__()
-        
         self._BASE_DIR = GLOBAL_BASE_DIR
         self._PACKAGED_RESOURCES_PATH = GLOBAL_PACKAGED_RESOURCES_PATH
-        
         self.GAME_READER_PATH = os.path.join(self._PACKAGED_RESOURCES_PATH, "bin", "game_reader.exe")
         self.ACHIEVEMENT_FETCHER_PATH = os.path.join(self._PACKAGED_RESOURCES_PATH, "bin", "achievement_fetcher.exe")
         self.STEAM_POPPER_PATH = os.path.join(self._PACKAGED_RESOURCES_PATH, "bin", "steam_popper.exe")
-
         self.IMAGE_CACHE_DIR = os.path.join(self._BASE_DIR, "cache", "image_cache")
         self.APP_VALIDATION_CACHE_FILE = os.path.join(self._BASE_DIR, "cache", "app_validation_cache.json")
         self.SETTINGS_FILE = os.path.join(self._BASE_DIR, "cache", "settings.json")
         self.ACHIEVEMENT_DATA_CACHE_DIR = os.path.join(self._BASE_DIR, "cache", "achievements")
-
         self.current_language = 'pt'
         self.current_theme = 'dark'
         self.translations = TRANSLATIONS
-
-        self.load_icons()
-        self.load_settings()
-        self.apply_theme(self.current_theme)
-
-        self.setWindowTitle(self.tr('app_title'))
-        app_icon_path = os.path.join(self._PACKAGED_RESOURCES_PATH, "src", "icons", "icon.ico")
-        if os.path.exists(app_icon_path):
-            self.setWindowIcon(QIcon(app_icon_path))
-
-        self.setGeometry(100, 100, 1280, 800)
-        self.setMinimumSize(800, 600)
-
         self.game_card_map = {}
         self.app_validation_cache = {}
         self.all_games_list = []
@@ -735,41 +718,38 @@ class App(QMainWindow):
         self.current_game_name = ""
         self.achievement_widgets = {}
         self.all_achievements_data = []
-
+        self.load_icons()
+        self.load_settings()
+        self.setWindowTitle(self.tr('app_title'))
+        app_icon_path = os.path.join(self._PACKAGED_RESOURCES_PATH, "src", "icons", "icon.ico")
+        if os.path.exists(app_icon_path):
+            self.setWindowIcon(QIcon(app_icon_path))
+        self.setGeometry(100, 100, 1280, 800)
+        self.setMinimumSize(800, 600)
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
-        
         self.create_games_panel()
-        
-        self.apply_theme(self.current_theme)
-
         self.create_loading_panel()
         self.create_achievements_panel()
-
         self.status_bar = CustomStatusBar(self, preferred_height=20)
         self.setStatusBar(self.status_bar)
-
         self.status_content_widget = QWidget()
         status_layout = QHBoxLayout(self.status_content_widget)
         status_layout.setContentsMargins(0, 0, 0, 0)
         status_layout.setSpacing(10)
-        
         self.status_message_label = QLabel(self.tr('ready'))
         status_layout.addWidget(self.status_message_label, 1)
-
         self.status_progress_bar = QProgressBar()
         self.status_progress_bar.setFixedWidth(150)
         self.status_progress_bar.setFixedHeight(15)
         self.status_progress_bar.setTextVisible(False)
         self.status_progress_bar.hide()
         status_layout.addWidget(self.status_progress_bar)
-        
         self.status_bar.addWidget(self.status_content_widget, 1)
-
+        self.status_bar.hide()
+        self.apply_theme(self.current_theme)
         self.create_cache_directory()
         self.check_binary_files()
-        
-        self.update_ui_texts()
         self.start_loading_process()
 
     def load_icons(self):
@@ -912,6 +892,7 @@ class App(QMainWindow):
             if hasattr(self, 'achievement_search_input') and self.achievement_search_input is not None:
                 self.achievement_search_input.set_search_icon(self.create_icon_from_b64(ICON_SEARCH_LIGHT_B64))
         self.save_settings()
+        self.update_ui_texts()
 
     def update_ui_texts(self):
         self.setWindowTitle(self.tr('app_title'))
@@ -922,6 +903,9 @@ class App(QMainWindow):
         self.ach_title_label.setText(self.tr('achievements_title'))
         self.achievement_search_input.setPlaceholderText(self.tr('search_placeholder_achievements'))
         self.unlock_button.setText(self.tr('unlock_selected'))
+        self.status_bar.removeWidget(self.status_content_widget)
+        self.status_message_label.setText(self.tr('ready'))
+        self.status_bar.addWidget(self.status_content_widget, 1)
         if self.stacked_widget.currentWidget() == self.achievements_panel and self.all_achievements_data:
             self.display_achievements(self.all_achievements_data)
 
