@@ -14,13 +14,15 @@ import datetime
 import time
 import multiprocessing
 import random
+import webbrowser
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QGridLayout, 
                              QScrollArea, QLabel, QPushButton, QVBoxLayout, 
                              QHBoxLayout, QDialog, QStackedWidget, QStatusBar,
                              QCheckBox, QFrame, QProgressBar, QGraphicsDropShadowEffect,
-                             QLineEdit, QRadioButton, QButtonGroup)
+                             QLineEdit, QRadioButton, QButtonGroup, QGraphicsOpacityEffect,
+                             QMessageBox)
 from PyQt6.QtGui import QPixmap, QImage, QFont, QIcon, QColor, QPainter
-from PyQt6.QtCore import Qt, QObject, pyqtSignal, QSize, QEvent, QPropertyAnimation, QRect, QPoint, QTimer, QPointF
+from PyQt6.QtCore import Qt, QObject, pyqtSignal, QSize, QEvent, QPropertyAnimation, QRect, QPoint, QTimer, QPointF, QEasingCurve
 
 if getattr(sys, 'frozen', False):
     base_dir = os.path.dirname(sys.executable)
@@ -38,6 +40,7 @@ else:
     GLOBAL_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     GLOBAL_PACKAGED_RESOURCES_PATH = os.path.dirname(os.path.abspath(__file__))
 
+APP_VERSION = "2.0.4"
 CARD_WIDTH = 215
 CARD_IMAGE_HEIGHT = int(CARD_WIDTH * 0.46)
 CARD_PADDING = 20
@@ -52,9 +55,11 @@ ICON_SEARCH_DARK_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhl
 ICON_SEARCH_LIGHT_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iNDhweCIgdmlld0JveD0iMCAtOTYwIDk2MCA5NjAiIHdpZHRoPSI0OHB4IiBmaWxsPSIjMDAwMDAwIj48cGF0aCBkPSJNNzk2LTEyMSA1MzMtMzg0cS0zMCAyNi02OS45NiA0MC41UTQyMy4wOC0zMjkgMzc4LTMyOXEtMTA4LjE2IDAtMTgzLjA4LTc1UTEyMC00NzkgMTIwLTU4NXQ3NS0xODFxNzUtNzUgMTgxLjUtNzV0MTgxIDc1UTYzMi02OTEgNjMyLTU4NC44NSA2MzItNTQyIDYxOC01MDJxLTE0IDQwLTQyIDc1bDI2NCAyNjItNDQgNDRaTTM3Ny0zODlxODEuMjUgMCAxMzguMTMtNTcuNVE1NzItNTA0IDU3Mi01ODV0LTU2Ljg3LTEzOC41UTQ1OC4yNS03ODEgMzc3LTc4MXEtODIuMDggMC0xMzkuNTQgNTcuNVExODAtNjY2IDE4MC01ODV0NTcuNDYgMTM4LjVRMjk0LjkyLTM4OSAzNzctMzg5WiIvPjwvc3ZnPg=="
 ICON_SETTINGS_DARK_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iNDhweCIgdmlld0JveD0iMCAtOTYwIDk2MCA5NjAiIHdpZHRoPSI0OHB4IiBmaWxsPSIjZTNlM2UzIj48cGF0aCBkPSJtMzg4LTgwLTIwLTEyNnEtMTktNy00MC0xOXQtMzctMjVsLTExOCA1NC05My0xNjQgMTA4LTc5cS0yLTktMi41LTIwLjVUMTg1LTQ4MHEwLTktLjUtMjAuNVQxODgtNTUxTDgwLTYwMGw5My0xNjQgMTE4IDU0cTE2LTEzIDM3LTI1dDQwLTE4bDIwLTEyN2gxODRsMjAgMTI2cTE5IDcgNDAuNSAxOC41VDY2OS03MTBsMTE4LTU0IDkzIDE2NC0xMDggNzdxMiAxMCAyLjUgMjEuNXQuNSAyMS41cTAgMTAtLjUgMjF0LTIuNSAyMWwxMDggNzgtOTMgMTY0LTExOC01NHEtMTYgMTMtMzYuNSAyNS41VDU5Mi0yMDZMNTcyLTgwSDM4OFptNDgtNjhoODhsMTQtMTEycTMzLTggNjIuNS0yNXQ1My41LTQxbDEwNiA0NiA0MC03Mi05NC02OXE0LTE3IDYuNS0zMy41VDcxNS00ODBxMC0xNy0yLTMzLjV0LTctMzMuNWw5NC02OS00MC03Mi0xMDYgNDZxLTIzLTI2LTUyLTQzLjVUNTM4LTcwOGwtMTQtMTEyaC04OGwtMTQgMTEycS0zNCA3LTYzLjUgMjRUMzA2LTY0MmwtMTA2LTQ2LTQwIDcyIDk0IDY5cS00IDE3LTYuNSAzMy41VDI0NS00ODBxMCAxNyAyLjUgMzMuNVQyNTQtNDEzbC05NCA2OSA0MCA3MiAxMDYtNDZxMjQgMjQgNTMuNSA0MXQ2Mi41IDI1bDE0IDExMlptNDQtMjEwcTU0IDAgOTItMzh0MzgtOTJxMC01NC0zOC05MnQtOTItMzhxLTU0IDAtOTIgMzh0LTM4IDkycTAgNTQgMzggOTJ0OTIgMzhabTAtMTMwWiIvPjwvc3ZnPg=="
 ICON_SETTINGS_LIGHT_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iNDhweCIgdmlld0JveD0iMCAtOTYwIDk2MCA5NjAiIHdpZHRoPSI0OHB4IiBmaWxsPSIjMDAwMDAwIj48cGF0aCBkPSJtMzg4LTgwLTIwLTEyNnEtMTktNy00MC0xOXQtMzctMjVsLTExOCA1NC05My0xNjQgMTA4LTc5cS0yLTktMi41LTIwLjVUMTg1LTQ4MHEwLTkgLjUtMjAuNVQxODgtNTIxTDgwLTYwMGw5My0xNjQgMTE4IDU0cTE2LTEzIDM3LTI1dDQwLTE4bDIwLTEyN2gxODRsMjAgMTI2cTE5IDcgNDAuNSAxOC41VDY2OS03MTBsMTE4LTU0IDkzIDE2NC0xMDggNzdxMiAxMCAyLjUgMjEuNXQuNSAyMS41cTAgMTAtLjUgMjF0LTIuNSAyMWwxMDggNzgtOTMgMTY0LTExOC01NHEtMTYgMTMtMzYuNSAyNS41VDU5Mi0yMDZMNTcyLTgwSDM4OFptNDgtNjBoODhsMTQtMTEycTMzLTggNjIuNS0yNXQ1My41LTQxbDEwNiA0NiA0MC03Mi05NC02OXE0LTE3IDYuNS0zMy41VDcxNS00ODBxMC0xNy0yLTMzLjV0LTctMzMuNWw5NC02OS00MC03Mi0xMDYgNDZxLTIzLTI2LTUyLTQzLjVUNTM4LTcwOGwtMTQtMTEyaC04OGwtMTQgMTEycS0zNCA3LTYzLjUgMjRUMzA2LTY0MmwtMTA2LTQ2LTQwIDcyIDk0IDY5cS00IDE3LTYuNSAzMy41VDI0NS00ODBxMCAxNyAyLjUgMzMuNVQyNTQtNDEzbC05NCA2OSA0MCA3MiAxMDYtNDZxMjQgMjQgNTMuNSA0MXQ2Mi41IDI1bDE0IDExMlptNDQtMjEwcTU0IDAgOTItMzh0MzgtOTJxMC01NC0zOC05MnQtOTItMzhxLTU0IDAtOTIgMzh0LTM4IDkycTAgNTQgMzggOTJ0OTIgMzhabTAtMTMwWiIvPjwvc3ZnPg=="
+ICON_GITHUB_B64 = "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"
+
 ESTILO_DARK = """
     QMainWindow, QDialog, QScrollArea > QWidget > QWidget {
-        background-color: #1e1e1e;
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #282c34, stop:1 #1e1e1e);
     }
     QWidget {
         color: #e0e0e0;
@@ -307,6 +312,10 @@ TRANSLATIONS = {
     'pt': {
         'app_title': "SAO - Steam Achievement Override",
         'loading_games': "Buscando jogos instalados...",
+        'finding_steam_libraries': "Procurando bibliotecas da Steam...",
+        'reading_game_manifests': "Lendo manifestos dos jogos...",
+        'parsing_game_list': "Analisando a lista de jogos encontrados...",
+        'preparing_image_download': "Preparando para baixar as imagens...",
         'fetching_achievements_data': "Buscando dados das conquistas...",
         'downloading_images': "Baixando {}/{} imagens...",
         'ready': "Pronto.",
@@ -347,6 +356,10 @@ TRANSLATIONS = {
     'en': {
         'app_title': "SAO - Steam Achievement Override",
         'loading_games': "Searching for installed games...",
+        'finding_steam_libraries': "Finding Steam libraries...",
+        'reading_game_manifests': "Reading game manifests...",
+        'parsing_game_list': "Parsing found games list...",
+        'preparing_image_download': "Preparing to download images...",
         'fetching_achievements_data': "Fetching achievement data...",
         'downloading_images': "Downloading {}/{} images...",
         'ready': "Ready.",
@@ -618,7 +631,7 @@ class SearchLineEdit(QLineEdit):
             icon_x = self.icon_padding
             icon_y = (self.height() - self.icon_size) // 2
             painter.drawPixmap(icon_x, icon_y, self.icon_size, self.icon_size,
-                               self._search_icon.pixmap(self.icon_size, self.icon_size))
+                                 self._search_icon.pixmap(self.icon_size, self.icon_size))
             painter.end()
 
 class SettingsDialog(QDialog):
@@ -720,6 +733,7 @@ class App(QMainWindow):
         self.all_achievements_data = []
         self.load_icons()
         self.load_settings()
+        self.load_quotes()
         self.setWindowTitle(self.tr('app_title'))
         app_icon_path = os.path.join(self._PACKAGED_RESOURCES_PATH, "src", "icons", "icon.ico")
         if os.path.exists(app_icon_path):
@@ -764,13 +778,28 @@ class App(QMainWindow):
         pixmap.loadFromData(base64.b64decode(b64_data), "svg")
         return QIcon(pixmap)
 
+    def load_quotes(self):
+        if getattr(sys, 'frozen', False):
+            base_path = self._PACKAGED_RESOURCES_PATH
+            quotes_path = os.path.join(base_path, 'data', 'quotes.json')
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            quotes_path = os.path.join(base_path, 'src', 'data', 'quotes.json')
+
+        try:
+            with open(quotes_path, 'r', encoding='utf-8') as f:
+                self.game_quotes = json.load(f)
+            print(f"Sucesso! {len(self.game_quotes)} citações carregadas de '{quotes_path}'")
+        except Exception as e:
+            print(f"ERRO: Não foi possível carregar o arquivo de citações de '{quotes_path}'. Causa: {e}")
+            self.game_quotes = [{"quote": "Erro ao carregar citações.", "game": "Verifique o console"}]
+
     def _perform_achievement_check_and_cache(self, appid):
         appid_str = str(appid)
         achievement_cache_file_path = os.path.join(self.ACHIEVEMENT_DATA_CACHE_DIR, f"{appid_str}.json")
         
         has_achievements_result = False
         error_on_check = None
-        cached_data = None
 
         try:
             if os.path.exists(achievement_cache_file_path):
@@ -787,12 +816,8 @@ class App(QMainWindow):
                 
                 result = subprocess.run(
                     [self.ACHIEVEMENT_FETCHER_PATH, appid_str],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    encoding='utf-8',
-                    creationflags=subprocess.CREATE_NO_WINDOW,
-                    cwd=bin_dir_for_subprocess
+                    capture_output=True, text=True, check=False, encoding='utf-8',
+                    creationflags=subprocess.CREATE_NO_WINDOW, cwd=bin_dir_for_subprocess
                 )
 
                 if result.returncode != 0:
@@ -809,7 +834,7 @@ class App(QMainWindow):
                             has_achievements_result = False
                             if os.path.exists(achievement_cache_file_path):
                                 os.remove(achievement_cache_file_path)
-                    except json.JSONDecodeError as e:
+                    except json.JSONDecodeError:
                         has_achievements_result = False
                         if os.path.exists(achievement_cache_file_path):
                             os.remove(achievement_cache_file_path)
@@ -833,7 +858,7 @@ class App(QMainWindow):
         ))
 
     def tr(self, key, *args):
-        text = self.translations[self.current_language].get(key, key)
+        text = self.translations.get(self.current_language, {}).get(key, key)
         if args:
             try:
                 return text.format(*args)
@@ -872,24 +897,19 @@ class App(QMainWindow):
         self.current_theme = theme
         if theme == 'dark':
             self.setStyleSheet(ESTILO_DARK + ESTILO_LOADING)
-            self.current_theme = 'dark'
-            if hasattr(self, 'settings_button') and self.settings_button is not None:
+            if hasattr(self, 'settings_button'):
                 self.settings_button.setIcon(self.create_icon_from_b64(ICON_SETTINGS_DARK_B64))
-
-            if hasattr(self, 'game_search_input') and self.game_search_input is not None:
+            if hasattr(self, 'game_search_input'):
                 self.game_search_input.set_search_icon(self.create_icon_from_b64(ICON_SEARCH_DARK_B64))
-            if hasattr(self, 'achievement_search_input') and self.achievement_search_input is not None:
+            if hasattr(self, 'achievement_search_input'):
                 self.achievement_search_input.set_search_icon(self.create_icon_from_b64(ICON_SEARCH_DARK_B64))
-
-        elif theme == 'light':
+        else: # light
             self.setStyleSheet(ESTILO_LIGHT + ESTILO_LOADING)
-            self.current_theme = 'light'
-            if hasattr(self, 'settings_button') and self.settings_button is not None:
+            if hasattr(self, 'settings_button'):
                 self.settings_button.setIcon(self.create_icon_from_b64(ICON_SETTINGS_LIGHT_B64))
-
-            if hasattr(self, 'game_search_input') and self.game_search_input is not None:
+            if hasattr(self, 'game_search_input'):
                 self.game_search_input.set_search_icon(self.create_icon_from_b64(ICON_SEARCH_LIGHT_B64))
-            if hasattr(self, 'achievement_search_input') and self.achievement_search_input is not None:
+            if hasattr(self, 'achievement_search_input'):
                 self.achievement_search_input.set_search_icon(self.create_icon_from_b64(ICON_SEARCH_LIGHT_B64))
         self.save_settings()
         self.update_ui_texts()
@@ -910,12 +930,9 @@ class App(QMainWindow):
             self.display_achievements(self.all_achievements_data)
 
     def create_cache_directory(self):
-        if not os.path.exists(self.IMAGE_CACHE_DIR):
-            os.makedirs(self.IMAGE_CACHE_DIR)
-        if not os.path.exists(os.path.dirname(self.SETTINGS_FILE)):
-            os.makedirs(os.path.dirname(self.SETTINGS_FILE))
-        if not os.path.exists(self.ACHIEVEMENT_DATA_CACHE_DIR):
-            os.makedirs(self.ACHIEVEMENT_DATA_CACHE_DIR)
+        os.makedirs(self.IMAGE_CACHE_DIR, exist_ok=True)
+        os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)
+        os.makedirs(self.ACHIEVEMENT_DATA_CACHE_DIR, exist_ok=True)
 
     def check_binary_files(self):
         required_executables = [
@@ -932,48 +949,91 @@ class App(QMainWindow):
         self.loading_panel = ParticleBackground(self)
 
         main_layout = QVBoxLayout(self.loading_panel)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(0, 0, 0, 10) 
         main_layout.setSpacing(0)
         main_layout.addStretch(1)
 
+
+        shadow_container = QWidget()
+        shadow_container.setFixedSize(500, 300)
+        shadow = QGraphicsDropShadowEffect(blurRadius=45, color=QColor(0, 0, 0, 100))
+        shadow_container.setGraphicsEffect(shadow)
+        
+        shadow_layout = QVBoxLayout(shadow_container)
+        shadow_layout.setContentsMargins(0, 0, 0, 0)
+
         glass_container = QFrame()
         glass_container.setObjectName("GlassPanel")
-        glass_container.setFixedSize(500, 300)
         
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(45)
-        shadow.setXOffset(0)
-        shadow.setYOffset(0)
-        shadow.setColor(QColor(0, 0, 0, 100))
-        glass_container.setGraphicsEffect(shadow)
-
+        self.opacity_effect = QGraphicsOpacityEffect(glass_container)
+        glass_container.setGraphicsEffect(self.opacity_effect)
+        
+        shadow_layout.addWidget(glass_container)
+        
         glass_layout = QVBoxLayout(glass_container)
         glass_layout.setContentsMargins(40, 40, 40, 40)
         glass_layout.setSpacing(15)
         glass_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
+        
         animation_widget = PulsatingDotsWidget(self)
-
         self.loading_status_label = QLabel(self.tr('loading_games'))
         self.loading_status_label.setObjectName("LoadingStatusLabel")
         self.loading_status_label.setFont(QFont("Segoe UI", 11))
         self.loading_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
+        self.loading_quote_label = QLabel("")
+        self.loading_quote_label.setObjectName("LoadingQuoteLabel")
+        self.loading_quote_label.setFont(QFont("Segoe UI", 9, italic=True))
+        self.loading_quote_label.setStyleSheet("color: #888;")
+        self.loading_quote_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loading_quote_label.setWordWrap(True)
+        
         glass_layout.addStretch(1)
         glass_layout.addWidget(animation_widget)
         glass_layout.addSpacing(15)
         glass_layout.addWidget(self.loading_status_label)
+        glass_layout.addWidget(self.loading_quote_label)
         glass_layout.addStretch(1)
-
+        
         h_layout = QHBoxLayout()
         h_layout.addStretch(1)
-        h_layout.addWidget(glass_container)
+        h_layout.addWidget(shadow_container)
         h_layout.addStretch(1)
         
         main_layout.addLayout(h_layout)
         main_layout.addStretch(1)
 
+        bottom_row_layout = QHBoxLayout()
+        bottom_row_layout.setContentsMargins(20, 0, 0, 10)
+
+        github_v_layout = QVBoxLayout()
+        github_v_layout.setSpacing(10)
+
+        github_logo_label = QLabel()
+        github_pixmap = QPixmap()
+        github_pixmap.loadFromData(base64.b64decode(ICON_GITHUB_B64), "png")
+        github_logo_label.setPixmap(github_pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        github_logo_label.setFixedSize(24, 24)
+
+        github_link_label = QLabel()
+        github_link_label.setText('<a href="https://github.com/NakomaNS" style="color: #999; text-decoration: none;">github.com/NakomaNS</a>')
+        github_link_label.setFont(QFont("Segoe UI", 8))
+        github_link_label.setOpenExternalLinks(True)
+
+        github_v_layout.addWidget(github_logo_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        github_v_layout.addWidget(github_link_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        
+        bottom_row_layout.addLayout(github_v_layout)
+        bottom_row_layout.addStretch(1)
+
+        main_layout.addLayout(bottom_row_layout)
+
         self.stacked_widget.addWidget(self.loading_panel)
+
+        if 'APP_VERSION' in globals():
+            self.version_label = QLabel(f"v{APP_VERSION}", self.loading_panel)
+            self.version_label.setStyleSheet("background-color: transparent; color: rgba(255, 255, 255, 0.3); font-family: 'Segoe UI'; font-size: 8pt;")
+            self.version_label.adjustSize()
 
     def create_games_panel(self):
         self.games_panel = QWidget()
@@ -1059,6 +1119,17 @@ class App(QMainWindow):
 
     def start_loading_process(self):
         self.stacked_widget.setCurrentWidget(self.loading_panel)
+        
+        if hasattr(self, 'game_quotes') and self.game_quotes:
+            quote_data = random.choice(self.game_quotes)
+            quote = quote_data.get('quote', '')
+            game = quote_data.get('game', '')
+            self.loading_quote_label.setText(f'"{quote}"\n— {game}')
+        
+        self.loading_panel.repaint()
+        QApplication.processEvents()
+        self.centralWidget().layout().activate()
+        self.loading_panel.layout().activate()
         self.worker_thread = threading.Thread(target=self._master_loader_thread, daemon=True)
         self.worker_thread.start()
 
@@ -1145,32 +1216,44 @@ class App(QMainWindow):
             self.build_grid(self.currently_displayed_games)
 
     def resizeEvent(self, event):
+        super().resizeEvent(event)
+        
+        if hasattr(self, 'version_label'):
+            margin = 10
+            self.version_label.move(
+                self.width() - self.version_label.width() - margin,
+                self.height() - self.version_label.height() - margin
+            )
+            
         if self.stacked_widget.currentWidget() == self.games_panel:
             self.build_grid(self.currently_displayed_games)
-        super().resizeEvent(event)
         
     def _master_loader_thread(self):
         try:
-            QApplication.instance().postEvent(self, UpdateLoadingEvent('loading_games', 0, 0))
+            QApplication.instance().postEvent(self, UpdateLoadingEvent('finding_steam_libraries'))
+            time.sleep(0.5) 
+            
+            QApplication.instance().postEvent(self, UpdateLoadingEvent('reading_game_manifests'))
             
             bin_dir_for_subprocess = os.path.dirname(self.GAME_READER_PATH)
-            print(f"--- DEBUG: PRESTES A EXECUTAR {self.GAME_READER_PATH} ---")
             result = subprocess.run(
                 [self.GAME_READER_PATH],
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding='utf-8',
-                creationflags=subprocess.CREATE_NO_WINDOW,
-                cwd=bin_dir_for_subprocess
+                capture_output=True, text=True, check=False, encoding='utf-8',
+                creationflags=subprocess.CREATE_NO_WINDOW, cwd=bin_dir_for_subprocess
             )
 
             if result.returncode != 0:
                 QApplication.instance().postEvent(self, ShowMessageEvent('critical_error', 'failed_load_games', 'error', result.stderr))
                 return
             
+            QApplication.instance().postEvent(self, UpdateLoadingEvent('parsing_game_list'))
+            time.sleep(0.5)
+            
             games_dict = {int(m.group(2)): m.group(1).strip() for line in result.stdout.splitlines() if (m := re.match(r'^(.*) \(AppID: (\d+)\)$', line.strip()))}
             self.all_games_list = sorted([{'appid': appid, 'name': name} for appid, name in games_dict.items()], key=lambda g: g['name'])
+            
+            QApplication.instance().postEvent(self, UpdateLoadingEvent('preparing_image_download'))
+            time.sleep(0.5)
 
             appids_with_images = self._fetch_all_images_parallel(self.all_games_list)
             
@@ -1181,7 +1264,6 @@ class App(QMainWindow):
             QApplication.instance().postEvent(self, UpdateLoadingEvent('ready', len(games_to_display), len(games_to_display)))
         except Exception as e:
             QApplication.instance().postEvent(self, ShowMessageEvent('critical_error', 'unexpected_error', 'error', str(e)))
-            pass
 
     def _fetch_all_images_parallel(self, games_to_fetch):
         total = len(games_to_fetch)
@@ -1446,15 +1528,10 @@ class App(QMainWindow):
         try:
             bin_dir_for_subprocess = os.path.dirname(self.STEAM_POPPER_PATH)
             command = [self.STEAM_POPPER_PATH, str(appid_to_refresh)] + to_unlock
-            print(f"--- DEBUG: PRESTES A EXECUTAR {command} ---")
             
             result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                check=False,
-                encoding='utf-8',
-                creationflags=subprocess.CREATE_NO_WINDOW,
+                command, capture_output=True, text=True, check=False,
+                encoding='utf-8', creationflags=subprocess.CREATE_NO_WINDOW,
                 cwd=bin_dir_for_subprocess
             )
 
@@ -1546,9 +1623,33 @@ class App(QMainWindow):
             else:
                 self.show_custom_message('info', 'no_achievements', 'info', self.current_game_name)
 
+def check_steam_running():
+    """Verifica se o processo 'steam.exe' está em execução."""
+    try:
+        result = subprocess.run(
+            'tasklist | findstr /i "steam.exe"',
+            shell=True,
+            capture_output=True,
+            check=False
+        )
+        return result.returncode == 0
+    except FileNotFoundError:
+        return False
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
+    
+    if not check_steam_running():
+        temp_app = QApplication(sys.argv)
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Icon.Warning)
+        msg_box.setWindowTitle("Steam não detectada")
+        msg_box.setText("A Steam não parece estar em execução.")
+        msg_box.setInformativeText("Por favor, abra a Steam e inicie o aplicativo novamente.")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
+        sys.exit(1)
+
     myappid = 'sao'
     if sys.platform == "win32":
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
