@@ -23,6 +23,15 @@ from PyQt6.QtGui import QPixmap, QImage, QFont, QIcon, QColor, QPainter
 from PyQt6.QtCore import Qt, QObject, pyqtSignal, QSize, QEvent, QPropertyAnimation, QRect, QPoint, QTimer, QPointF
 
 if getattr(sys, 'frozen', False):
+    base_dir = os.path.dirname(sys.executable)
+    os.environ['PATH'] = os.path.join(base_dir, 'pyd') + os.pathsep + \
+                         os.path.join(base_dir, 'dll') + os.pathsep + \
+                         os.environ['PATH']
+
+if getattr(sys, 'frozen', False):
+    sys.path.append(os.path.join(os.path.dirname(sys.executable), 'pyd'))
+
+if getattr(sys, 'frozen', False):
     GLOBAL_BASE_DIR = os.path.dirname(sys.executable)
     GLOBAL_PACKAGED_RESOURCES_PATH = sys._MEIPASS
 else:
@@ -400,7 +409,7 @@ class ParticleBackground(QWidget):
         
         self.particle_color = QColor(0, 150, 255, 120)
         self.num_particles = 500
-        self.particle_size = 2
+        self.particle_size = 0.5
         self.background_color = QColor("#111822")
         self._initialized = False
 
@@ -451,76 +460,6 @@ class ParticleBackground(QWidget):
     def hideEvent(self, event):
         self._timer.stop()
         super().hideEvent(event)
-        
-    def _init_particles(self):
-        if self.width() == 0: return
-        w = self.width()
-        h = self.height()
-        for _ in range(self.num_particles):
-            self.particles.append({
-                "x": random.randint(0, w),
-                "y": random.randint(0, h),
-                "speed": random.uniform(0.2, 1.2)
-            })
-        self._initialized = True
-
-    def _update_particles(self):
-        if not self._initialized: return
-        for p in self.particles:
-            p['y'] += p['speed']
-            if p['y'] > self.height():
-                p['y'] = 0
-                p['x'] = random.randint(0, self.width())
-        self.update()
-
-    def paintEvent(self, event):
-        if not self._initialized and self.width() > 0:
-            self._init_particles()
-
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.fillRect(self.rect(), self.background_color)
-
-        if not self.particles: return
-        for p in self.particles:
-            painter.fillRect(int(p['x']), int(p['y']),
-                             self.particle_size, self.particle_size,
-                             self.particle_color)
-        
-        for p in self.particles:
-            painter.drawEllipse(int(p['x']), int(p['y']), self.particle_size, self.particle_size)
-
-    def showEvent(self, event):
-        if not self.particles and self.width() > 0:
-            for _ in range(self.num_particles):
-                self.particles.append({
-                    "x": random.randint(0, self.width()),
-                    "y": random.randint(0, self.height()),
-                    "speed": random.uniform(0.2, 1.2)
-                })
-        self._timer.start()
-        super().showEvent(event)
-
-    def hideEvent(self, event):
-        self._timer.stop()
-        super().hideEvent(event)
-
-    def _update_particles(self):
-        for p in self.particles:
-            p['y'] += p['speed']
-            if p['y'] > self.height():
-                p['y'] = 0
-                p['x'] = random.randint(0, self.width())
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.fillRect(self.rect(), self.background_color)
-
-        painter.setPen(self.particle_color)
-        for p in self.particles:
-            painter.drawPoint(int(p['x']), int(p['y']))
 
 class PulsatingDotsWidget(QWidget):
     def __init__(self, parent=None):
