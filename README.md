@@ -14,7 +14,7 @@ Desbloqueie conquistas na Steam sem nem sequer abrir o jogo!
 
 Baixe a versão mais recente para Windows:
 
-[Baixar versão para Windows](https://github.com/nakomaNS/SteamAchievementOverride/releases/download/latest/SteamAchievementOverride.zip)
+[Baixar versão para Windows](https://github.com/nakomaNS/SteamAchievementOverride/releases/download/2.0.3/SteamAchievementOverride.zip)
 
 **Observação: Por ser um software de um desenvolvedor independente, o Windows pode exibir um aviso de segurança (SmartScreen). Se isso acontecer, clique em "Mais informações" e depois em "Executar assim mesmo". Não se preocupe, todo o código do programa é aberto.**
 
